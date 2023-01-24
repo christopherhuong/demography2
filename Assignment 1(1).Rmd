@@ -1,0 +1,150 @@
+---
+title: "Homework 1"
+output: html_document
+date: '2023-01-21'
+---
+
+# Kara Joyner
+
+## Kara.Joyner@utsa.edu
+
+![Here is my screenshot](C:/Users/aon632/OneDrive - University of Texas at San Antonio/Desktop/Stats 2/Screenshot of R Studio.png)
+
+
+# Including libraries
+
+```{r}
+library(readxl)
+library(car)
+library(janitor)
+library(ggplot2)
+library(stargazer)
+library(ggpubr)
+library(ggrepel)
+
+
+```
+
+# Reading in the Excel file
+
+```{r}
+Junkins <- read_excel("C:/Users/aon632/OneDrive - University of Texas at San Antonio/Desktop/Stats 2/Junkins Data.xlsx")
+```
+
+# Creation of variables
+
+```{r}
+
+Junkins$south<- recode(Junkins$region, "3=1; else=0")
+tabyl(Junkins$south)
+
+Junkins$northeast<- recode(Junkins$region, "1=1; else=0")
+tabyl(Junkins$northeast)
+
+Junkins$midwest<- recode(Junkins$region, "2=1; else=0")
+tabyl(Junkins$midwest)
+
+Junkins$west<- recode(Junkins$region, "4=1; else=0")
+tabyl(Junkins$west)
+
+Junkins$relconssq<-Junkins$relcons*Junkins$relcons
+
+Junkins$relconscu<-Junkins$relconssq*Junkins$relcons
+
+Junkins$relconsln<-log(Junkins$relcons)
+
+Junkins$relconsrec<-1/(Junkins$relcons)
+
+```
+
+# geographic variation in age at marriage
+
+```{r}
+
+model <-lm(t_ageFM~northeast + midwest + west, Junkins)
+
+summary(model)
+
+model <-lm(t_ageFM~northeast, Junkins)
+
+summary(model)
+
+
+```
+
+#scatterplot and correlation of DV with IV
+
+```{r}
+
+plot(Junkins$relcons,Junkins$t_ageFM)
+
+cor.test(Junkins$relcons,Junkins$t_ageFM)
+
+```
+
+# tests of different specifications of religious concentration
+
+```{r}
+
+model <-lm(t_ageFM~relcons, Junkins)
+
+summary(model)
+
+model <-lm(t_ageFM~relcons + relconssq, Junkins)
+
+summary(model)
+
+model <-lm(t_ageFM~relcons + relconssq + relconscu, Junkins)
+
+summary(model)
+
+model <-lm(t_ageFM~relconsln, Junkins)
+
+summary(model)
+
+model <-lm(t_ageFM~relconsrec, Junkins)
+
+summary(model)
+
+```
+
+# test of mediation
+
+```{r}
+
+model <-lm(t_ageFM~northeast + relcons, Junkins)
+
+summary(model)
+
+```
+
+# test of moderation
+
+```{r}
+
+model <-lm(t_ageFM~northeast + relcons + (northeast*relcons), Junkins)
+
+summary(model)
+
+```
+
+# creating a nice summary table
+
+```{r}
+
+Model.1 <- lm(t_ageFM~northeast, Junkins)
+Model.2 <- lm (t_ageFM~northeast + relcons, Junkins)
+
+
+#https://ademos.people.uic.edu/Chapter13.html
+
+stargazer(Model.1, Model.2,type="text", 
+column.labels = c("Model 1", "Model 2"), 
+intercept.bottom = FALSE, 
+single.row=FALSE,     
+notes.append = FALSE, 
+header=FALSE) 
+
+```
+
+
