@@ -1,0 +1,149 @@
+---
+title: "DEMassign1"
+author: "Christopher Huong"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r warning = FALSE, message = FALSE}
+library(tidyverse)
+library(readxl)
+library(car)
+library(janitor)
+library(ggplot2)
+library(stargazer)
+library(ggpubr)
+library(ggrepel)
+dat <- read_excel("Junkins Data.xlsx")
+```
+Load in relevant libraries and import excel data
+
+```{r}
+dat <- dat %>%
+  mutate(south = if_else(region == 3, 1L, 0L),
+         northeast = if_else(region == 1, 1L, 0L),
+         midwest = if_else(region == 2, 1L, 0L),
+         west = if_else(region == 4, 1L, 0L))
+
+sum(dat$south, dat$midwest, dat$northeast, dat$west)
+```
+Create new variables 'south', 'northeast', 'midwest', and 'west'.
+Assign south = 1 if region = 3, else south = 0. 1L means the integer 1, rather than 1.0000...
+Assign northeast = 1 if region = 1, else northeast = 0
+Assign midwest = 1 if region = 2, else midwest = 0
+Assign west = 1 if region = 4, else west = 0
+
+Then add the new columns to make sure they sum to 50
+
+```{r}
+dat <- dat %>%
+  mutate(relcons2 = relcons^2,
+         relcons3 = relcons^3,
+         relconsln = log(relcons),
+         relconsrec = relcons^-1)
+```
+
+Create new variables for transformed relcons
+
+```{r}
+plot(dat$relcons,dat$t_ageFM)
+
+cor.test(dat$relcons,dat$t_ageFM)
+```
+
+Plot the scatter plot with x = relcons, and y = t_ageFM to visualize the relationship
+Calculate the Pearson correlation between the variables
+Notice a relatively strong negative relationship, with r=-0.57 confirming this
+
+```{r}
+mod1 <-lm(t_ageFM ~ relcons, dat)
+summary(mod1)
+```
+Use OLS linear model to regress age of first marriage on religious conservatism
+The model predicts for every 1 unit increase in relcons is associated with a -0.05 unit decrease in t_ageFM. ~32% of the variance of t_ageFM is explained by relcons. 
+
+
+```{r}
+mod2 <- lm(t_ageFM ~ relcons + relcons2, dat)
+summary(mod2)
+```
+Add a quadratic relcons term to the regression to model a nonlinear relationship of y and x
+No added variance is explained
+
+```{r}
+mod3 <-lm(t_ageFM~relcons + relcons2 + relcons3, dat)
+summary(mod3)
+```
+Add a quadratic and cubic term to the regression model, no added variance is explained
+
+```{r}
+mod4 <-lm(t_ageFM~relconsln, dat)
+summary(mod4)
+```
+Log-transforming the predictor, which should improve the model if the distribution of the predictor is skewed
+No added variance is explained
+
+```{R}
+mod5 <-lm(t_ageFM~relconsrec, dat)
+summary(mod5)
+```
+Taking the recipricol of the predictor
+No added variance is explained
+
+
+```{R}
+BIC(mod1, mod2, mod3, mod4, mod5)
+anova(mod1, mod2, mod3, mod4, mod5)
+```
+Directly comparing the models.
+
+Model 1 has the lowest BIC, indicating that the relationship between t_ageFM and relcons is best explained by a linear model
+
+```{R}
+mod_med <-lm(t_ageFM~northeast + relcons, dat)
+
+summary(mod_med)
+```
+Coefficient went from -0.04911 to -0.04375 and no added variance was explained, indicating that being a northeastern state does not mediate the relationship between t_ageFM and relcons
+
+```{r}
+mod_moder <- lm(t_ageFM~relcons*northeast, dat)
+summary(mod_moder)
+```
+Modeling main effects of relcons and northeast, as well as their interaction
+The northeast:relcons term is non-significant, indicating no interaction with relcons and northeast on t_ageFM
+
+```{r}
+mod_a <- lm(t_ageFM~northeast, dat)
+mod_b <- lm (t_ageFM~northeast + relcons, dat)
+
+stargazer(mod_a, mod_b,type="text", 
+          column.labels = c("Model 1", "Model 2"), 
+          intercept.bottom = FALSE, 
+          single.row=FALSE,     
+          notes.append = FALSE, 
+          header=FALSE) 
+```
+Pretty table
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

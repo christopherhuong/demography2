@@ -1,0 +1,11 @@
+name: Publish Document
+title:
+username:
+account: rpubs
+server: rpubs.com
+hostUrl: rpubs.com
+appId: https://api.rpubs.com/api/v1/document/996400/a64f77dbe82740c495d542c38f78ca65
+bundleId: https://api.rpubs.com/api/v1/document/996400/a64f77dbe82740c495d542c38f78ca65
+url: http://rpubs.com/chrishuong/996400
+when: 1674966916.95684
+lastSyncTime: 1674966916.95685
