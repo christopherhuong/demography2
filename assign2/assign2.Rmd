@@ -1,0 +1,79 @@
+---
+title: "assign2"
+author: "Christopher Huong"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+
+```{r message = F}
+library(tidyverse)
+library(ggplot2)
+library(usmap)
+library(psych)
+```
+Load in libraries
+```{r}
+data <- read.csv("junkinsdata.csv")
+```
+Load in data
+
+
+
+
+```{r warning = F}
+dat <- data[, c("rz_ext", "rz_agr", "rz_cns", "rz_neu", "rz_opn",
+                     "ageFB", "t_ageFM", "nevermar", "cohabit", "abortion",
+                     "voteO", "vryrel", "perBA")]
+
+fa.parallel(dat)
+
+pc <- prcomp(dat,
+             center = T, scale. = T, retx = T)
+```
+Conduct parallel analysis and principal components analysis (PCA) with personality trait items, family demographic items, and items indicating political leaning, religiosity, and education. We center the data set to ignore the mean of the data. We scale the variables to standardize the units. Lastly, we ask for the values of the rotated variables.
+
+PCA reduces the dimensions of the data, to collapse a large set of items into fewer 'components' according to their shared variance. The advantage of PCA over factor analysis (FA) in this analysis is that FA posits an unobserved, underlying latent variable which causally accounts for the covariance among indicators (observed items). When dealing with demographic variables, this is an implausible assumption (i.e. that there is an underlying entity we call SES which accounts for covariance in income, occupation status, and education. Rather, we are agnostic to the causal relationships driving the covariance structure, and we just describe and label it "SES". PCA is more appropriate for this task.)
+
+
+"Parallel analysis suggests that the number of factors =  3  and the number of components =  2" For simplicity, we will focus on the first principal component, which will account for the highest variance of the data.
+
+
+Hypothesis: More traditional family patterns (i.e., lower first birth age, lower age of first marriage, lower rates of never married, lower rates of cohabiting, lower rates of abortion) share variance with more conservative personality traits (i.e. higher conscientiousness, lower neuroticism, and lower openness) and demographic variables (less likely to have voted for Obama, higher religiosity, and less educated). The first component will capture this dimension.
+
+```{r}
+summary(pc)
+```
+The first principal component accounts for 41% of the variance in the data. The second principal component accounts for an additional 18% of the variance in data. This is decent. 
+
+```{r}
+pc$rotation
+```
+Return the principal component loadings, which is the variance of each variable explained by the principal component. 
+
+The first principal component is characterized by higher extraversion, agreeableness, conscientiousness, and religiosity, and by lower neuroticism, openness, age of first birth, age of first marriage, rates of never married, rates of cohabitation, rates of abortion, democratic voters, and education.
+
+This constellation of variance seems to describe traditionally conservative demographic patterns, especially high conscientiousness, low openness, low age of first birth and marriage, low rates of abortion, less democratic, more religious, and less educated.
+
+
+
+
+```{r}
+plot(pc$x[,1], pc$x[,2])
+
+```
+
+Plot the first two principal components. We can see that PC1 accounts for most of the variance of the data.
+
+```{r}
+dat1 <- cbind(data[,1], data.frame(pc$x[,1]))
+colnames(dat1) <- c("State", "PC1")
+print(dat1[order(dat1$PC1, decreasing = T),])
+
+```
+
+
+Retrieve PC1 scores for each state, and sort them by decreasing PC1 score. We can notice that more conservative states have the highest PC1 scores, which are characterized by more conservative personality traits and demographic variables, while liberal states populate the bottom of the list.
+
+
+
