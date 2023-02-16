@@ -1,0 +1,59 @@
+---
+title: "assign3"
+output: html_document
+date: "2023-02-12"
+---
+
+
+
+
+```{r}
+data <- read.csv("junkinsdata.csv")
+
+
+dat <- data[, c("ageFB", "t_ageFM", "nevermar", "cohabit", "abortion", "vryrel", "perBA")]
+
+km2 <- kmeans(dat, 2, 1000)
+```
+
+Read in data, select variables we want to cluster by.
+Perform k-means cluster analysis with clusters set to 2, to test the hypothesis that these variables reliably differ based on political orientation (democrat-republican), operationalized by state 2020 presidential election results. Iterations are set to 1000
+
+
+
+```{r}
+data$km2 <- km2$cluster
+data$vote2020 <- c("R","R","R","D","D","D","D","D","R","D","D","R","R","D","R","R","R","D","D","D","D","D","R","R","R","R","R","R","D","D","D","D","D","R","R","D","D","D","R","R","R","R","R","R","D","D","D","D","R","R")
+```
+Add the cluster variable to the original data set 
+Create new column with the 2020 presidential election results for each state 
+
+```{r}
+data <- data[order(data$km2),]
+print(data[,c(1,64,63)])
+table(data$vote2020, data$km2)
+```
+See how well k-means predicted state election vote by the selected variables, with k=2.
+Performed OK but not great.
+
+```{r}
+pc <- prcomp(dat,
+             center = T, scale. = T, retx = T)
+
+dat1 <- cbind(data[,c(1,64,63)], data.frame(pc$x[,1]))
+colnames(dat1) <- c("State", "Vote","Cluster", "PC1")
+print(dat1[order(dat1$PC1),])
+```
+Conduct PCA on the same variables, and see if PCA predicts the state's cluster or vote.
+Neither seem to be consistently associated with low/high PCA
+
+
+
+The variables selected do not seem to reliably sort the states into republical/democrat.
+
+
+
+
+
+
+
