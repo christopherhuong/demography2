@@ -83,6 +83,7 @@ df <- dat %>%
   )
 
 
+
 colnames(df) <- c("DEPR", "AGE", "SEX", "STATE",
   "ACEDEPRS", "ACEDRINK", "ACEDRUGS", "ACEPRISN",
   "ACEDIVRC", "ACEPUNCH", "ACEHURT1", "ACESWEAR", "ACETOUCH",
@@ -90,6 +91,18 @@ colnames(df) <- c("DEPR", "AGE", "SEX", "STATE",
   "RACE", "BMI", "INCOME"
   
   )
+
+# DEPR
+# Question: (Ever told) (you had) a depressive disorder 
+# (including depression, major depression, dysthymia, or minor depression)? 
+
+
+# PA
+# Question: Adults who reported doing physical activity or exercise 
+# during the past 30 days other than their regular job 
+
+
+
 
 
 #Input NA for coded missing
@@ -297,6 +310,21 @@ BIC(mod1, mod2, mod3)
 # is preferable to model 1 and 3
 
 
+
+
+
+ggplot(df, aes(x=as.factor(ACE_CAT_SUM), fill=as.factor(DEPR)))+
+  geom_bar(aes( y=..count../tapply(..count.., ..x.. ,sum)[..x..]), position="dodge" ) +
+  geom_text(aes( y=..count../tapply(..count.., ..x.. ,sum)[..x..], label=scales::percent(..count../tapply(..count.., ..x.. ,sum)[..x..]) ),
+            stat="count", position=position_dodge(0.9), vjust=-0.5)+
+  ylab('IDK') +
+  scale_y_continuous(labels = scales::percent)
+
+
+
+
+
+
 #look at individual ACE categories
 
 cols <- c(23:29)
@@ -315,6 +343,8 @@ mod4 <- glm(DEPR ~ ACE_PSYCH +
 summary(mod4)                  
 exp(cbind(OR = coef(mod4), confint(mod4)))[c(2:8),]       
               
+
+
 
 
 

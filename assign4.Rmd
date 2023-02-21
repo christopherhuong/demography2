@@ -336,8 +336,16 @@ exp(cbind(OR = coef(mod4), confint(mod4)))[c(2:8),]
 ```
 
 
+```{r}
+ggplot(df, aes(x=as.factor(ACE_CAT_SUM), fill=as.factor(DEPR)))+
+  geom_bar(aes( y=..count../tapply(..count.., ..x.. ,sum)[..x..]), position="dodge" ) +
+  geom_text(aes( y=..count../tapply(..count.., ..x.. ,sum)[..x..], label=scales::percent(..count../tapply(..count.., ..x.. ,sum)[..x..]) ),
+            stat="count", position=position_dodge(0.9), vjust=-0.5)+
+  ylab('IDK') +
+  scale_y_continuous(labels = scales::percent)
 
 
+```
 
 
 
