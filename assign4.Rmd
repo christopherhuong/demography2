@@ -1,5 +1,12 @@
+---
+title: "assign4"
+author: "Christopher Huong"
+date: "`r Sys.Date()`"
+output: html_document
+---
 
 
+```{r message = F}
 library(tidyverse)
 library(ggplot2)
 
@@ -18,7 +25,10 @@ d <- dat %>%
 
 colnames(d) <- c("DEPR", "AGE", "SEX", "RACE")
 
+```
+Choose variables, rename columns
 
+```{r}
 d <- d %>%
   mutate(DEPR = case_when(DEPR == 1 ~ 1, # 1 = yes depr
                           DEPR == 2 ~ 0, # 0 = no depr
@@ -48,18 +58,18 @@ d <- d %>%
 d$RACE <- as.factor(d$RACE)
 d$RACE <- relevel(d$RACE, ref = "White")
 
+```
+Cleaning
 
+```{r}
 mod <- glm(DEPR ~ RACE + SEX + AGE,
             family = "binomial",
             data = d)
 
 summary(mod)
 exp(cbind(OR = coef(mod), confint(mod)))
-
-
-
-
-
+```
+Modeling. All terms are significantly associated with probability of reporting having been diagnosed with depression
 
 
 
@@ -71,7 +81,7 @@ exp(cbind(OR = coef(mod), confint(mod)))
 
 
 
-
+```{r}
 df <- dat %>%
   select("ADDEPEV3", "_AGEG5YR", "_SEX", "_STATE",
   "ACEDEPRS", "ACEDRINK", "ACEDRUGS", "ACEPRISN",
@@ -90,9 +100,11 @@ colnames(df) <- c("DEPR", "AGE", "SEX", "STATE",
   "RACE", "BMI", "INCOME"
   
   )
+```
+Import and rename
 
 
-#Input NA for coded missing
+```{r}
 
 df <- df %>%
   mutate(DEPR = case_when(DEPR == 1 ~ 1, # 1 = yes depr
@@ -146,13 +158,11 @@ df <- df %>%
                             INCOME == 9 ~ NA_character_))
 
 
-
-
-
-
-
 df[, 2][df[, 2] == 14] <- NA #assign 14 to NA in age column
+```
+Recode
 
+```{r}
 # convert to factors and assign reference levels
 df$SEX <- factor(df$SEX, labels = c("M", "F"))
 df$EDU <- as.factor(df$EDU)
@@ -171,8 +181,6 @@ df[, 5:15][df[, 5:15] == 8] <- NA
 df[, 5:15][df[, 5:15] == 9] <- NA
 
 
-
-
 # ACEDEPRS - ACEDIVRC: yes=1, no=2
 #convert to yes=1, no=0
 df[, 5:9][df[, 5:9] == 2] <- 0 
@@ -189,17 +197,19 @@ df[, 10:15][df[, 10:15] == 3] <- 1
 df <- na.omit(df)
 sum(is.na(df))
 #remove all NA, 40024 rows left, ~9% of original sample
+```
+More recoding
 
 
 
-
-
+```{r}
 df <- df %>%
   mutate(ACE = ACEDEPRS + ACEDRINK + ACEDRUGS + ACEPRISN +
               ACEDIVRC + ACEPUNCH + ACEHURT1 + ACESWEAR + 
               ACETOUCH + ACETTHEM + ACEHVSEX)
 
-#total ACEs (0-11)
+# create new column for total ACEs (0-11)
+
 
 
 df <- df %>%
@@ -237,68 +247,76 @@ df <- df %>%
 df <- df %>%
   mutate(ACE_CAT_SUM = ACE_PSYCH + ACE_PHYS + ACE_SXL + ACE_HD_SA
                      + ACE_HD_MI + ACE_HD_PAR + ACE_HD_CRIM)
-#total ACE category score (0-7)
+# create new column total ACE category score (0-7) per original ACE study
+```
 
-
-
+```{r}
 library(fishmethods)
 
 clus.rho(popchar = df$DEPR, cluster = df$STATE)
 clus.rho(popchar = df$PA, cluster = df$STATE)
+```
+Calculate ICC to determine if need to cluster by state
+Within state variance far outweights between state variance, no need to cluster
 
-# calculate ICC to determine if need to cluster by state
-# within state variance far outweights between state variance, no need to cluster
 
 
 
-#predicting PA
+Predicting PA
+```{r}
 mod0 <- glm(as.factor(PA) ~ ACE_CAT_SUM  + DEPR 
             + AGE + SEX + EDU + RACE + BMI + INCOME, 
             family = "binomial", data = df)
 
 summary(mod0)
 exp(cbind(OR = coef(mod0), confint(mod0)))
+```
+ACE score does not predict PA
 
 
-
-# predicting diagnosis of depression with ACE score and PA
-
+Predicting diagnosis of depression with ACE score and PA
+```{r}
 mod1 <- glm(DEPR ~ ACE_CAT_SUM + as.factor(PA), 
             family = "binomial", data = df)
 
 summary(mod1)
 exp(cbind(OR = coef(mod1), confint(mod1)))
+```
+Compute adjusted ORs
+Increase in ACE category = 1.47x likely to report depression diagnosis
+Reporting PA = 59% as likely to report depression diagnosis
 
-# compute adjusted ORs
-# increase in ACE category = 1.47x likely to report depression diagnosis
-# reporting PA = 59% as likely to report depression diagnosis
-
-
+```{r}
 mod2 <- glm(DEPR ~ ACE_CAT_SUM + as.factor(PA)
             + AGE + SEX + EDU + RACE + BMI + INCOME, 
              family = "binomial", data = df)
 
 summary(mod2)
 exp(cbind(OR = coef(mod2), confint(mod2)))[c(2:11,16,19:24),]
-# compute adjusted ORs, extract estimates with p < 0.01
+```
+Compute adjusted ORs, extract estimates with p < 0.01
+Estimates are relatively stable when controlling for covariates
 
-# model ACE*PA interaction
+
+Model ACE*PA interaction
+```{r}
 mod3 <- glm(DEPR ~ ACE_CAT_SUM*as.factor(PA)
           + AGE + SEX + EDU + RACE + BMI + INCOME, 
             family = "binomial", data = df)
 
 summary(mod3)
+```
+Nonsignificant interaction term
 
-# nonsignificant interaction term
-
+```{r}
 BIC(mod1, mod2, mod3)
+```
+Model 2 with the set of covariates has a lower BIC and therefore is preferable to model 1 and 3
 
-# model 2 with the set of covariates has a lower BIC and therefore
-# is preferable to model 1 and 3
 
 
-#look at individual ACE categories
-
+Look at individual ACE categories
+```{r}
 cols <- c(23:29)
 df <- df %>% mutate_at(cols, factor)
 
@@ -315,6 +333,8 @@ mod4 <- glm(DEPR ~ ACE_PSYCH +
 summary(mod4)                  
 exp(cbind(OR = coef(mod4), confint(mod4)))[c(2:8),]       
               
+```
+
 
 
 
