@@ -1,16 +1,18 @@
-
+---
+title: "assign5"
+output: html_document
+date: "2023-02-27"
+---
+```{r, message=F}
 library(tidyverse)
 library(ggplot2)
 library(margins)
 library(haven)
 library(janitor)
 
-# dat2 <- read_xpt('LLCP2020.XPT_')
+```
 
-# save(dat2, file = "BRFSS2020.RData")
-
-
-
+```{r}
 load('BRFSS.RData')
 
 
@@ -36,7 +38,7 @@ colnames(df) <- c("DEPR", "AGE", "SEX", "STATE",
                   "RACE", "BMI", "INCOME"
                   
 )
-
+```
 # DEPR
 # Question: (Ever told) (you had) a depressive disorder 
 # (including depression, major depression, dysthymia, or minor depression)? 
@@ -51,7 +53,7 @@ colnames(df) <- c("DEPR", "AGE", "SEX", "STATE",
 
 
 #Input NA for coded missing
-
+```{r}
 df <- df %>%
   mutate(DEPR = case_when(DEPR == 1 ~ 1, # 1 = yes depr
                           DEPR == 2 ~ 0, # 0 = no depr
@@ -190,7 +192,7 @@ df <- df %>%
   mutate(ACE_CAT_SUM = ACE_PSYCH + ACE_PHYS + ACE_SXL + ACE_HD_SA
          + ACE_HD_MI + ACE_HD_PAR + ACE_HD_CRIM)
 #total ACE category score (0-7)
-
+```
 
 
 
@@ -198,7 +200,7 @@ df <- df %>%
 
 # analysis ----------------------------------------------------------------
 
-
+```{r}
 m1 <- glm(DEPR ~ ACE_CAT_SUM + PA + AGE + SEX + EDU,
           data = df,
           family = binomial(logit))
@@ -206,29 +208,52 @@ m1 <- glm(DEPR ~ ACE_CAT_SUM + PA + AGE + SEX + EDU,
 
 summary(m1)
 exp(cbind(OR = coef(m1), confint(m1)))
-
-#basic logistic regression, and exponentiating the coefficients for aORs
-
-me1 <- margins(m1, variables = c("ACE_CAT_SUM", "PA"))
+```
+Basic logistic regression, and exponentiating the coefficients for aORs
+```{r}
+me1 <- margins(m1, variables = NULL)
 summary(me1)
+```
+Average marginal effects
+Each increase in ace score increases probability of depression by ~5%
+PA decreases probability of depression by ~8%
+Being female increases by 10%
 
-# average marginal effects
-# each increase in ace score increases probability of depression by ~5%
-# PA decreases probability of depression by ~8%
+```{r}
+margins(m1, at = list(ACE_CAT_SUM = range(df$ACE_CAT_SUM)) )
+```
 
+```{r}
+m2 <- glm(DEPR~ ACE_CAT_SUM*SEX + PA + AGE + EDU,
+          data = df,
+          family = binomial(logit))
 
+summary(m2)
+exp(cbind(OR = coef(m2), confint(m2)))
+```
 
+Model interaction term for ACE*SEX to see if probability of DEPR as a function of ACE score differs by SEX
+```{r}
+me2 <- margins(m2, variables = NULL)
+summary(me2)
+```
+Significant interaction term.
+AME's seem to be unchanged when adding interaction
 
+```{r}
+margins(m2, at = list(ACE_CAT_SUM = range(df$ACE_CAT_SUM)))
+```
+Looking at marginal effects at 0 and 7 ACE scores to check for differences compared to model1 without interaction.
+Marginal effects at 0 and 7 ACE score similar on ACE_CAT_SUM and SEXF. Though there was a statistically significant interaction effect, the size of the effect was not large enough to detect meaningful differences in MEs.
 
+# plotting AMEs -----------------------------------------------------------
+```{r, message=F}
+library(sjPlot)
+```
+```{r}
+plot_model(m1, type = "pred")
 
-
-
-
-
-
-
-
-
+```
 
 
 
