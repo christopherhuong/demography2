@@ -1,8 +1,236 @@
 
 library(tidyverse)
 library(ggplot2)
-
+library(margins)
 library(haven)
-dat2 <- read_xpt('LLCP2020.XPT_')
+library(janitor)
 
-save(dat2, file = "BRFSS2020.RData")
+# dat2 <- read_xpt('LLCP2020.XPT_')
+
+# save(dat2, file = "BRFSS2020.RData")
+
+
+
+load('BRFSS.RData')
+
+
+
+
+
+df <- dat %>%
+  select("ADDEPEV3", "_AGEG5YR", "_SEX", "_STATE",
+         "ACEDEPRS", "ACEDRINK", "ACEDRUGS", "ACEPRISN",
+         "ACEDIVRC", "ACEPUNCH", "ACEHURT1", "ACESWEAR", "ACETOUCH",
+         "ACETTHEM", "ACEHVSEX",  "_TOTINDA", "MENTHLTH", "_EDUCAG", 
+         "_RACE", "_BMI5CAT", "_INCOMG1"
+         
+         
+  )
+
+
+
+colnames(df) <- c("DEPR", "AGE", "SEX", "STATE",
+                  "ACEDEPRS", "ACEDRINK", "ACEDRUGS", "ACEPRISN",
+                  "ACEDIVRC", "ACEPUNCH", "ACEHURT1", "ACESWEAR", "ACETOUCH",
+                  "ACETTHEM", "ACEHVSEX", "PA", "MH_DAYS", "EDU",
+                  "RACE", "BMI", "INCOME"
+                  
+)
+
+# DEPR
+# Question: (Ever told) (you had) a depressive disorder 
+# (including depression, major depression, dysthymia, or minor depression)? 
+
+
+# PA
+# Question: Adults who reported doing physical activity or exercise 
+# during the past 30 days other than their regular job 
+
+
+
+
+
+#Input NA for coded missing
+
+df <- df %>%
+  mutate(DEPR = case_when(DEPR == 1 ~ 1, # 1 = yes depr
+                          DEPR == 2 ~ 0, # 0 = no depr
+                          DEPR == 7 ~ NA_real_,
+                          DEPR == 9 ~ NA_real_))
+
+
+df[, 17][df[, 17] == 88] <- 0 #assign 88 to 0 in MH_DAYS column
+df[, 17][df[, 17] == 77] <- NA
+df[, 17][df[, 17] == 99] <- NA 
+
+
+df <- df %>%
+  mutate(PA = case_when(PA == 1 ~ 1, # 1 = yes PA
+                        PA == 2 ~ 0, # 0 = no PA
+                        PA == 9 ~ NA_real_))
+
+
+
+
+df <- df %>%
+  mutate(EDU = case_when(EDU == 1 ~ "NO_HS",
+                         EDU == 2 ~ "HS",
+                         EDU == 3 ~ "ATTENDCOL",
+                         EDU == 4 ~ "GRADCOL",
+                         EDU == 9 ~ NA_character_))
+
+
+df <- df %>%
+  mutate(RACE = case_when(RACE == 1 ~ "WHITE",
+                          RACE == 2 ~ "BLACK",
+                          RACE == 3 ~ "NATIVE",
+                          RACE == 4 ~ "ASIAN",
+                          RACE == 5 ~ "ISLANDER",
+                          RACE == 6 ~ "OTHER",
+                          RACE == 7 ~ "MULTI",
+                          RACE == 8 ~ "HISPANIC",
+                          RACE == 9 ~ NA_character_))
+
+df <- df %>%
+  mutate(BMI = case_when(BMI == 1 ~ "UNDERW",
+                         BMI == 2 ~ "NORMW",
+                         BMI == 3 ~ "OVERW",
+                         BMI == 4 ~ "OBESE"))
+
+
+df <- df %>%
+  mutate(INCOME = case_when(INCOME == 1 ~ "0-15K",
+                            INCOME == 2 ~ "15-25K",
+                            INCOME == 3 ~ "25-35K",
+                            INCOME == 4 ~ "35-50K",
+                            INCOME == 5 ~ "50-100K",
+                            INCOME == 6 ~ "100-200K",
+                            INCOME == 7 ~ "200K+",
+                            INCOME == 9 ~ NA_character_))
+
+
+
+df[, 2][df[, 2] == 14] <- NA #assign 14 to NA in age column
+
+# convert to factors and assign reference levels
+df$SEX <- factor(df$SEX, labels = c("M", "F"))
+df$EDU <- as.factor(df$EDU)
+df$EDU <- relevel(df$EDU, ref = "NO_HS")
+df$RACE <-as.factor(df$RACE)
+df$RACE <- relevel(df$RACE, ref = "WHITE")
+df$BMI <- as.factor(df$BMI)
+df$BMI <- relevel(df$BMI, ref = "NORMW")
+df$INCOME <- factor(df$INCOME)
+df$INCOME <- relevel(df$INCOME, ref = "0-15K")
+
+
+
+
+
+
+# replace other answers with NA in ACE Qs
+df[, 5:15][df[, 5:15] == 7] <- NA
+df[, 5:15][df[, 5:15] == 8] <- NA
+df[, 5:15][df[, 5:15] == 9] <- NA
+
+
+
+
+# ACEDEPRS - ACEDIVRC: yes=1, no=2
+#convert to yes=1, no=0
+df[, 5:9][df[, 5:9] == 2] <- 0 
+# ACEHURT1 - ACEHVSEX: never=1, once=2, morethanonce=3
+#convert to never=0, once=1, morethanonce=1
+df[, 10:15][df[, 10:15] == 1] <- 0
+df[, 10:15][df[, 10:15] == 2] <- 1
+df[, 10:15][df[, 10:15] == 3] <- 1
+
+
+# 7 = don't know/not sure, 9 = refused. convert all to missing
+
+
+df <- na.omit(df)
+sum(is.na(df))
+#remove all NA, 39632 rows left, ~9% of original sample
+
+
+df <- df %>%
+  mutate(ACE_PSYCH = if_else(ACESWEAR == 1, #psychological abuse
+                             1L, 0L))
+
+df <- df %>%
+  mutate(ACE_PHYS = if_else(ACEHURT1 == 1, #physical abuse
+                            1L, 0L))
+
+df <- df %>%
+  mutate(ACE_SXL = if_else(ACETOUCH == 1 | #sexual abuse
+                             ACETTHEM == 1 |
+                             ACEHVSEX == 1,
+                           1L, 0L))
+
+df <- df %>%
+  mutate(ACE_HD_SA = if_else(ACEDRINK == 1 | #household dysf, substance abuse
+                               ACEDRUGS == 1,
+                             1L, 0L))
+
+df <- df %>%
+  mutate(ACE_HD_MI = if_else(ACEDEPRS == 1, #household dysf, mental illness
+                             1L, 0L))
+
+df <- df %>%
+  mutate(ACE_HD_PAR = if_else(ACEDIVRC == 1 | #household dysf, parental dispute
+                                ACEPUNCH == 1,
+                              1L, 0L))
+
+df <- df %>%
+  mutate(ACE_HD_CRIM = if_else(ACEPRISN == 1, #household dysf, prison
+                               1L, 0L))
+
+df <- df %>%
+  mutate(ACE_CAT_SUM = ACE_PSYCH + ACE_PHYS + ACE_SXL + ACE_HD_SA
+         + ACE_HD_MI + ACE_HD_PAR + ACE_HD_CRIM)
+#total ACE category score (0-7)
+
+
+
+
+
+
+# analysis ----------------------------------------------------------------
+
+
+m1 <- glm(DEPR ~ ACE_CAT_SUM + PA + AGE + SEX + EDU,
+          data = df,
+          family = binomial(logit))
+
+
+summary(m1)
+exp(cbind(OR = coef(m1), confint(m1)))
+
+#basic logistic regression, and exponentiating the coefficients for aORs
+
+me1 <- margins(m1, variables = c("ACE_CAT_SUM", "PA"))
+summary(me1)
+
+# average marginal effects
+# each increase in ace score increases probability of depression by ~5%
+# PA decreases probability of depression by ~8%
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
